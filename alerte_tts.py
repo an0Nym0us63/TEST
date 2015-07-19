@@ -8,9 +8,18 @@ import shutil
 import time
 from pydub import AudioSegment
 
+if len(sys.argv) < 2:
+    print "Veuillez saisir au moins un parametre. Phrase entre quotes"
+    
+elif len(sys.argv) < 3:
+    phrase=sys.argv[1]
+    jingleparam=""
+else:
+    phrase=sys.argv[1]
+    jingleparam=sys.argv[2]
 cachepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'cache'))
 jinglepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'jingle'))
-hashtxt = hashlib.md5(sys.argv[1]+sys.argv[2]).hexdigest()
+hashtxt = hashlib.md5(phrase+jingleparam).hexdigest()
 hashfile = hashtxt+'.mp3'
 filename=os.path.join(cachepath,hashfile)
 found = 0
@@ -27,7 +36,7 @@ if found == 0 :
 
     req = Request(url='http://translate.google.com/translate_tts')
     req.add_header('User-Agent', 'My agent !') #Needed otherwise return 403 Forbidden
-    req.add_data("tl=FR&q="+sys.argv[1]+"&ie=UTF-8")
+    req.add_data("tl=FR&q="+phrase+"&ie=UTF-8")
     fin = urlopen(req)
     mp3 = fin.read()
     fout = file(filename, "wb")
@@ -35,7 +44,7 @@ if found == 0 :
     fout.close()
     song = AudioSegment.from_mp3(filename)
     try:
-        jinglename=os.path.join(jinglepath,sys.argv[2]+'.mp3')
+        jinglename=os.path.join(jinglepath,jingleparam+'.mp3')
         jingle= AudioSegment.from_mp3(jinglename)
         songmodified = jingle+song
     except:
