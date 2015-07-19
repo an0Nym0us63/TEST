@@ -27,16 +27,19 @@ if found == 0 :
 
     req = Request(url='http://translate.google.com/translate_tts')
     req.add_header('User-Agent', 'My agent !') #Needed otherwise return 403 Forbidden
-    req.add_data("tl=FR&q="+sys.argv[7]+"&ie=UTF-8")
+    req.add_data("tl=FR&q="+sys.argv[1]+"&ie=UTF-8")
     fin = urlopen(req)
     mp3 = fin.read()
     fout = file(filename, "wb")
     fout.write(mp3)
     fout.close()
     song = AudioSegment.from_mp3(filename)
-    jinglename=os.path.join(jinglepath,sys.argv[10]+'.mp3')
-    jingle= AudioSegment.from_mp3(jinglename)
-    songmodified = jingle+song
+    try:
+        jinglename=os.path.join(jinglepath,sys.argv[2]+'.mp3')
+        jingle= AudioSegment.from_mp3(jinglename)
+        songmodified = jingle+song
+    except:
+        songmodified=song
     songmodified.export(filename, format="mp3", bitrate="128k", tags={'albumartist': 'Alerte', 'title': 'TTS', 'artist':'Alerte'}, parameters=["-ar", "44100","-vol", "800"])
 
 cmd = ['mplayer']
