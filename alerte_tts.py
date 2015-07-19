@@ -11,7 +11,7 @@ from pydub import AudioSegment
 
 if len(sys.argv) < 2:
     print "Veuillez saisir au moins un parametre. Phrase entre quotes"
-    
+    sys.exit(0)
 elif len(sys.argv) < 3:
     phrase=sys.argv[1]
     jingleparam=""
