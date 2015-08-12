@@ -8,51 +8,46 @@ import hashlib
 import shutil
 import time
 from pydub import AudioSegment
+from flask import Flask
+talkie = Flask(__name__)
 
-if len(sys.argv) < 2:
-    print "Veuillez saisir au moins un parametre. Phrase entre quotes"
-    sys.exit(0)
-elif len(sys.argv) < 3:
-    phrase=sys.argv[1]
-    jingleparam=""
-else:
-    phrase=sys.argv[1]
-    jingleparam=sys.argv[2]
-cachepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'cache'))
-jinglepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'jingle'))
-hashtxt = hashlib.md5(phrase+jingleparam).hexdigest()
-hashfile = hashtxt+'.mp3'
-filename=os.path.join(cachepath,hashfile)
-found = 0
-try:
-    os.stat(cachepath)
-except:
-    os.mkdir(cachepath)
-for filefound in os.listdir(cachepath):
-    if str(hashfile) == str(filefound) :
-        found=1
-        break
+@talkie.route("/")
+def index():
+    return "Talkie Web Link !!"
 
-if found == 0 :
+@talkie.route("/hello")
+def hello():
+    return "Hello World!!"
 
-    req = Request(url='http://translate.google.com/translate_tts')
-    req.add_header('User-Agent', 'My agent !') #Needed otherwise return 403 Forbidden
-    req.add_data("tl=FR&q="+phrase+"&ie=UTF-8")
-    fin = urlopen(req)
-    mp3 = fin.read()
-    fout = file(filename, "wb")
-    fout.write(mp3)
-    fout.close()
-    song = AudioSegment.from_mp3(filename)
-    try:
-        jinglename=os.path.join(jinglepath,jingleparam+'.mp3')
+@talkie.route('/post/phrase=<phrase>&jingle=<jingle>')
+def talk(phrase,jingle=None):
+    print jingle
+    phrase=phrase.encode('utf-8')
+    cachepath=os.path.dirname(os.path.dirname(__file__))
+    jinglepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'jingle'))
+    file = 'tts'
+    filename=os.path.join(cachepath,file+'.wav')
+    filenamemp3=os.path.join(cachepath,file+'.mp3')
+    os.system('pico2wave -l fr-FR -w '+filename+ ' "' +phrase+ '"')
+    song = AudioSegment.from_wav(filename)
+    if not jingle:
+        songmodified=song
+    else:
+        jinglename=os.path.join(jinglepath,jingle+'.mp3')
+        try:
+            os.stat(jinglename)
+        except:
+            return 'Erreur le jingle %s n\'existe pas' % jinglename
+        jinglename=os.path.join(jinglepath,jingle+'.mp3')
         jingle= AudioSegment.from_mp3(jinglename)
         songmodified = jingle+song
-    except:
-        songmodified=song
-    songmodified.export(filename, format="mp3", bitrate="128k", tags={'albumartist': 'Alerte', 'title': 'TTS', 'artist':'Alerte'}, parameters=["-ar", "44100","-vol", "800"])
+    songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
+    song = AudioSegment.from_mp3(filenamemp3)
+    cmd = ['mplayer']
+    cmd.append(filenamemp3)
+    with open(os.devnull, 'wb') as nul:
+		subprocess.call(cmd, stdin=nul)
+    return 'Post %s' % phrase
 
-cmd = ['mplayer']
-cmd.append(filename)
-with open(os.devnull, 'wb') as nul:
-    subprocess.call(cmd, stdin=nul)
+if __name__ == "__main__":
+    talkie.run(host='0.0.0.0')
