@@ -83,8 +83,17 @@ def talk(phrase):
         song = AudioSegment.from_mp3(filenamemp3)
         cmd = ['mplayer']
         cmd.append(filenamemp3)
+        if GPIO.input(17) != 0 :
+            print 'GPIO 17 en cours d\'utilisation'
+            while GPIO.input(17) != 0 :
+                time.sleep(0.5)
+        print 'GPIO 17 libre'
+        GPIO.output(18, 1)
+        print 'GPIO 18 ON et synthese du message'
         with open(os.devnull, 'wb') as nul:
             subprocess.call(cmd, stdout=nul, stderr=subprocess.STDOUT)
+        GPIO.output(18, 0)
+        print 'Synthese finie GPIO 18 OFF'
     except Exception, e:
         return str(e)
     return 'Post %s' % phrase
