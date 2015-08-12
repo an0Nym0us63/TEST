@@ -20,8 +20,7 @@ def hello():
     return "Hello World!!"
 
 @talkie.route('/post/phrase=<phrase>&jingle=<jingle>')
-def talk(phrase,jingle=None):
-    print jingle
+def talkjingle(phrase,jingle=None):
     phrase=phrase.encode('utf-8')
     cachepath=os.path.dirname(os.path.dirname(__file__))
     jinglepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'jingle'))
@@ -41,6 +40,24 @@ def talk(phrase,jingle=None):
         jinglename=os.path.join(jinglepath,jingle+'.mp3')
         jingle= AudioSegment.from_mp3(jinglename)
         songmodified = jingle+song
+    songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
+    song = AudioSegment.from_mp3(filenamemp3)
+    cmd = ['mplayer']
+    cmd.append(filenamemp3)
+    with open(os.devnull, 'wb') as nul:
+		subprocess.call(cmd, stdin=nul)
+    return 'Post %s' % phrase
+
+@talkie.route('/post/phrase=<phrase>')
+def talk(phrase):
+    phrase=phrase.encode('utf-8')
+    cachepath=os.path.dirname(os.path.dirname(__file__))
+    file = 'tts'
+    filename=os.path.join(cachepath,file+'.wav')
+    filenamemp3=os.path.join(cachepath,file+'.mp3')
+    os.system('pico2wave -l fr-FR -w '+filename+ ' "' +phrase+ '"')
+    song = AudioSegment.from_wav(filename)
+    songmodified=song
     songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
     song = AudioSegment.from_mp3(filenamemp3)
     cmd = ['mplayer']
