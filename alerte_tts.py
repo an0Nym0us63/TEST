@@ -1,15 +1,15 @@
 #!/usr/bin/env python
-import sys
-import json
-from urllib2 import Request, urlopen
 import subprocess
-import os, glob
-import hashlib
-import shutil
+import os
+import RPi.GPIO as GPIO
 import time
 from pydub import AudioSegment
 from flask import Flask
 talkie = Flask(__name__)
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(17, GPIO.IN)
+GPIO.setup(18, GPIO.OUT)
 
 @talkie.route("/")
 def index():
@@ -18,53 +18,86 @@ def index():
 @talkie.route("/hello")
 def hello():
     return "Hello World!!"
-
+    
+@talkie.route("/gpio-read")
+def gpioread():
+    try:
+        result=GPIO.input(17)
+    except Exception, e:
+        return str(e)
+    return 'Etat Gpio 17 : ' + str(result)
+    
 @talkie.route('/post/phrase=<phrase>&jingle=<jingle>')
 def talkjingle(phrase,jingle=None):
-    phrase=phrase.encode('utf-8')
-    cachepath=os.path.dirname(os.path.dirname(__file__))
-    jinglepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'jingle'))
-    file = 'tts'
-    filename=os.path.join(cachepath,file+'.wav')
-    filenamemp3=os.path.join(cachepath,file+'.mp3')
-    os.system('pico2wave -l fr-FR -w '+filename+ ' "' +phrase+ '"')
-    song = AudioSegment.from_wav(filename)
-    if not jingle:
-        songmodified=song
-    else:
-        jinglename=os.path.join(jinglepath,jingle+'.mp3')
-        try:
-            os.stat(jinglename)
-        except:
-            return 'Erreur le jingle %s n\'existe pas' % jinglename
-        jinglename=os.path.join(jinglepath,jingle+'.mp3')
-        jingle= AudioSegment.from_mp3(jinglename)
-        songmodified = jingle+song
-    songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
-    song = AudioSegment.from_mp3(filenamemp3)
-    cmd = ['mplayer']
-    cmd.append(filenamemp3)
-    with open(os.devnull, 'wb') as nul:
-		subprocess.call(cmd, stdin=nul)
+    try:
+        phrase=phrase.encode('utf-8')
+        cachepath=os.path.dirname(os.path.dirname(__file__))
+        jinglepath=os.path.abspath(os.path.join(os.path.dirname(__file__), 'jingle'))
+        file = 'tts'
+        filename=os.path.join(cachepath,file+'.wav')
+        filenamemp3=os.path.join(cachepath,file+'.mp3')
+        os.system('pico2wave -l fr-FR -w '+filename+ ' "' +phrase+ '"')
+        song = AudioSegment.from_wav(filename)
+        if not jingle:
+            songmodified=song
+        else:
+            jinglename=os.path.join(jinglepath,jingle+'.mp3')
+            try:
+                os.stat(jinglename)
+            except:
+                return 'Erreur le jingle %s n\'existe pas' % jinglename
+            jinglename=os.path.join(jinglepath,jingle+'.mp3')
+            jingle= AudioSegment.from_mp3(jinglename)
+            songmodified = jingle+song
+        songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
+        song = AudioSegment.from_mp3(filenamemp3)
+        cmd = ['mplayer']
+        cmd.append(filenamemp3)
+        if GPIO.input(17) != 0 :
+            print 'GPIO 17 en cours d\'utilisation'
+            while GPIO.input(17) != 0 :
+                time.sleep(0.5)
+        print 'GPIO 17 libre'
+        GPIO.output(18, 1)
+        print 'GPIO 18 ON et synthese du message'
+        with open(os.devnull, 'wb') as nul:
+            subprocess.call(cmd, stdout=nul, stderr=subprocess.STDOUT)
+        GPIO.output(18, 0)
+        print 'Synthese finie GPIO 18 OFF'
+    except Exception, e:
+        return str(e)
     return 'Post %s' % phrase
 
 @talkie.route('/post/phrase=<phrase>')
 def talk(phrase):
-    phrase=phrase.encode('utf-8')
-    cachepath=os.path.dirname(os.path.dirname(__file__))
-    file = 'tts'
-    filename=os.path.join(cachepath,file+'.wav')
-    filenamemp3=os.path.join(cachepath,file+'.mp3')
-    os.system('pico2wave -l fr-FR -w '+filename+ ' "' +phrase+ '"')
-    song = AudioSegment.from_wav(filename)
-    songmodified=song
-    songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
-    song = AudioSegment.from_mp3(filenamemp3)
-    cmd = ['mplayer']
-    cmd.append(filenamemp3)
-    with open(os.devnull, 'wb') as nul:
-		subprocess.call(cmd, stdin=nul)
+    try:
+        phrase=phrase.encode('utf-8')
+        cachepath=os.path.dirname(os.path.dirname(__file__))
+        file = 'tts'
+        filename=os.path.join(cachepath,file+'.wav')
+        filenamemp3=os.path.join(cachepath,file+'.mp3')
+        os.system('pico2wave -l fr-FR -w '+filename+ ' "' +phrase+ '"')
+        song = AudioSegment.from_wav(filename)
+        songmodified=song
+        songmodified.export(filenamemp3, format="mp3", bitrate="128k", tags={'albumartist': 'Talkie', 'title': 'TTS', 'artist':'Talkie'}, parameters=["-ar", "44100","-vol", "200"])
+        song = AudioSegment.from_mp3(filenamemp3)
+        cmd = ['mplayer']
+        cmd.append(filenamemp3)
+        with open(os.devnull, 'wb') as nul:
+            subprocess.call(cmd, stdout=nul, stderr=subprocess.STDOUT)
+    except Exception, e:
+        return str(e)
     return 'Post %s' % phrase
 
 if __name__ == "__main__":
-    talkie.run(host='0.0.0.0')
+    try:
+        talkie.run(host='0.0.0.0',port=4001)
+    except KeyboardInterrupt:
+        print 'Ctrl+C pressed cleaning'
+        GPIO.cleanup()
+    except:
+        GPIO.cleanup()
+    finally:
+        GPIO.cleanup()
+        
+        
